@@ -1,0 +1,7 @@
+version: '3'
+
+services:
+  haddop:
+    container_name: hadoop
+    build: .
+    tty: true
