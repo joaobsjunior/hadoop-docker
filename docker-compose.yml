@@ -1,7 +1,13 @@
 version: '3'
 
 services:
-  haddop:
+  hadoop:
     container_name: hadoop
     build: .
+    ports:
+      - "3000:3000"
+      - "9000:9000"
+    volumes: 
+      - ./data:/hadoop/data
+      - ./config:/usr/local/hadoop
     tty: true

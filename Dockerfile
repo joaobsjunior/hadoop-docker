@@ -7,7 +7,10 @@ USER root
 #LINUX PACKAGES INSTALLATION
 #-------------------------------------------------------
 
-RUN apt-get -y update && apt-get clean && apt-get autoremove && \
+RUN apt-get -y update && \
+    apt-get -y upgrade && \
+    apt-get clean && \
+    apt-get autoremove && \
     apt-get -y install \
     ssh \
     rsync \
@@ -39,6 +42,7 @@ ENV HADOOP_MAPRED_HOME=$HADOOP_HOME \
 RUN curl http://ftp.unicamp.br/pub/apache/hadoop/common/hadoop-$HADOOP_VERSION/hadoop-$HADOOP_VERSION.tar.gz --output hadoop.tar.gz
 RUN tar -zxvf hadoop.tar.gz && mv ./hadoop-$HADOOP_VERSION /usr/local/hadoop
 ADD ./config $HADOOP_HOME/etc/hadoop
+RUN chmod 777 -R $HADOOP_HOME/etc/hadoop
 
 #ssh config
 RUN yes y | ssh-keygen -t rsa -N '' -P '' -f ~/.ssh/id_rsa && \
@@ -46,31 +50,30 @@ RUN yes y | ssh-keygen -t rsa -N '' -P '' -f ~/.ssh/id_rsa && \
     chmod 0600 ~/.ssh/authorized_keys && \
     echo "PermitRootLogin yes" >> /etc/ssh/sshd_config
 ADD ./install/ssh_config ~/.ssh/config
-RUN service ssh restart
+RUN service ssh start && service ssh restart && service ssh force-reload
 
-#create h
+#create hdfs
 RUN $HADOOP_HOME/bin/hdfs namenode -format
 
+RUN $HADOOP_HOME/etc/hadoop/hadoop-env.sh && \
+    $HADOOP_HOME/sbin/start-dfs.sh && \
+    $HADOOP_HOME/bin/hdfs dfs -mkdir -p /user/root
 
+ADD ./install/bootstrap.sh /etc/bootstrap.sh
+RUN chown root:root /etc/bootstrap.sh && \
+    chmod 700 /etc/bootstrap.sh
 
-# RUN service ssh restart && \
-#     $HADOOP_HOME/etc/hadoop/hadoop-env.sh && \
-#     $HADOOP_HOME/sbin/start-dfs.sh && \
-#     $HADOOP_HOME/bin/hdfs dfs -mkdir -p /user/root
+ENV BOOTSTRAP /etc/bootstrap.sh
 
-# ADD ./install/bootstrap.sh /etc/bootstrap.sh
-# RUN chown root:root /etc/bootstrap.sh && \
-#     chmod 700 /etc/bootstrap.sh
-
-# ENV BOOTSTRAP /etc/bootstrap.sh
-
-# CMD ["/etc/bootstrap.sh", "-d"]
+CMD ["/etc/bootstrap.sh", "-d"]
 
 # # Hdfs ports
-# EXPOSE 50010 50020 50070 50075 50090 8020 9000
+EXPOSE 50010 50020 50070 50075 50090 8020 9000
 # # Mapred ports
-# EXPOSE 10020 19888
+EXPOSE 10020 19888
 # #Yarn ports
-# EXPOSE 8030 8031 8032 8033 8040 8042 8088
+EXPOSE 8030 8031 8032 8033 8040 8042 8088
 # #Other ports
-# EXPOSE 49707 2122
+EXPOSE 49707 2122
+
+ENTRYPOINT /bin/bash
