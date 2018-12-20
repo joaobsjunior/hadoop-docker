@@ -1,5 +1,5 @@
 FROM ubuntu:18.04
-LABEL Name=hadoop Version=0.0.1
+LABEL Name=joaojuniormail/hadoop Version=0.0.1
 
 USER root
 
