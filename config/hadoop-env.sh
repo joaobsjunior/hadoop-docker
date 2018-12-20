@@ -23,7 +23,7 @@
 
 # The java implementation to use.
 #export JAVA_HOME=${JAVA_HOME}
-export JAVA_HOME=export JAVA_HOME=$(readlink -f /usr/bin/java | sed "s:bin/java::")
+export JAVA_HOME=$(readlink -f /usr/bin/java | sed "s:bin/java::")
 export HADOOP_HOME=/usr/local/hadoop
 
 # The jsvc implementation to use. Jsvc is required to run secure datanodes
