@@ -8,7 +8,12 @@ rm /tmp/*.pid
 cd $HADOOP_HOME/share/hadoop/common ; for cp in ${ACP//,/ }; do  echo == $cp; curl -LO $cp ; done; cd -
 
 service ssh restart
+$HADOOP_HOME/bin/hdfs namenode -format
 $HADOOP_HOME/sbin/start-dfs.sh
+$HADOOP_HOME/bin/hdfs dfs -mkdir /tmp
+$HADOOP_HOME/bin/hdfs dfs -mkdir -p /user/root
+$HADOOP_HOME/bin/hdfs dfs -put $HADOOP_HOME/etc/hadoop input
+$HADOOP_HOME/bin/hdfs dfs -chmod g+w /tmp
 $HADOOP_HOME/sbin/start-yarn.sh
 
 if [[ $1 == "-d" ]]; then

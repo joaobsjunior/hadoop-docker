@@ -1,5 +1,5 @@
 FROM ubuntu:18.04
-LABEL Name=joaojuniormail/hadoop Version=0.0.1
+LABEL Name=hadoop Version=0.0.1
 
 USER root
 
@@ -15,6 +15,7 @@ RUN apt-get -y update && \
     build-essential \
     ssh \
     rsync \
+    net-tools \
     lsof \
     curl \
     openjdk-8-jdk
@@ -59,6 +60,20 @@ RUN mkdir -p $HADOOP_HOME/input
 RUN cp $HADOOP_HOME/etc/hadoop/*.xml $HADOOP_HOME/input
 ADD ./config $HADOOP_HOME/etc/hadoop
 VOLUME /hadoop/data
+RUN echo 'export JAVA_HOME=$(readlink -f /usr/bin/java | sed "s:bin/java::") \
+export HADOOP_HOME=/usr/local/hadoop \
+export HADOOP_MAPRED_HOME=$HADOOP_HOME \
+export HADOOP_COMMON_HOME=$HADOOP_HOME \
+export HADOOP_HDFS_HOME=$HADOOP_HOME \
+export HADOOP_COMMON_LIB_NATIVE_DIR=$HADOOP_HOME/lib/native \
+export HADOOP_OPTS="$HADOOP_OPTS -Djava.library.path=$HADOOP_HOME/lib/native" \
+export PATH=$PATH:$HADOOP_HOME/sbin \
+export PATH=$PATH:$HADOOP_HOME/bin \
+export HADOOP_INSTALL=$HADOOP_HOME \
+export HADOOP_CLASSPATH=$JAVA_HOME/lib/tools.jar \
+export YARN_HOME=$HADOOP_HOME \
+export HIVE_HOME=/usr/local/hive \
+export PATH=$PATH:$HIVE_HOME/bin' >> /root/.bashrc
 
 ADD ./install/ssh_config /root/.ssh/config
 RUN chmod 600 /root/.ssh/config
