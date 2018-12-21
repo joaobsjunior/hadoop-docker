@@ -4,7 +4,7 @@ LABEL Name=hadoop Version=0.0.1
 USER root
 
 #-------------------------------------------------------
-#LINUX PACKAGES INSTALLATION
+# HADOOP INSTALLER
 #-------------------------------------------------------
 
 RUN apt-get -y update && \
@@ -20,14 +20,11 @@ RUN apt-get -y update && \
     curl \
     openjdk-8-jdk
 
-#-------------------------------------------------------
-#CONFIGURING ENVIRONMENTAL VARIABLES
-#-------------------------------------------------------
-
 ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/jre/ \
     HADOOP_VERSION=2.9.2 \
     HIVE_HOME=/usr/local/hive \
-    HADOOP_HOME=/usr/local/hadoop
+    HADOOP_HOME=/usr/local/hadoop \
+    HADOOP_CONF_DIR=$HADOOP_HOME/etc/hadoop
 ENV HADOOP_MAPRED_HOME=$HADOOP_HOME \
     HADOOP_COMMON_HOME=$HADOOP_HOME \
     HADOOP_HDFS_HOME=$HADOOP_HOME \
@@ -36,10 +33,6 @@ ENV HADOOP_MAPRED_HOME=$HADOOP_HOME \
     HADOOP_INSTALL=$HADOOP_HOME \
     HADOOP_CLASSPATH=$JAVA_HOME/lib/tools.jar \
     YARN_HOME=$HADOOP_HOME
-
-#-------------------------------------------------------
-#HADOOP INSTALLATION
-#-------------------------------------------------------
 
 # get hadoop project
 RUN curl http://ftp.unicamp.br/pub/apache/hadoop/common/hadoop-$HADOOP_VERSION/hadoop-$HADOOP_VERSION.tar.gz --output hadoop.tar.gz
@@ -65,6 +58,7 @@ export HADOOP_HOME=/usr/local/hadoop \
 export HADOOP_MAPRED_HOME=$HADOOP_HOME \
 export HADOOP_COMMON_HOME=$HADOOP_HOME \
 export HADOOP_HDFS_HOME=$HADOOP_HOME \
+export HADOOP_CONF_DIR=$HADOOP_HOME/etc/hadoop \
 export HADOOP_COMMON_LIB_NATIVE_DIR=$HADOOP_HOME/lib/native \
 export HADOOP_OPTS="$HADOOP_OPTS -Djava.library.path=$HADOOP_HOME/lib/native" \
 export PATH=$PATH:$HADOOP_HOME/sbin \
@@ -73,6 +67,8 @@ export HADOOP_INSTALL=$HADOOP_HOME \
 export HADOOP_CLASSPATH=$JAVA_HOME/lib/tools.jar \
 export YARN_HOME=$HADOOP_HOME \
 export HIVE_HOME=/usr/local/hive \
+export SPARK_VERSION=2.4.0 \
+export SPARK_HOME=/usr/local/spark \
 export PATH=$PATH:$HIVE_HOME/bin' >> /root/.bashrc
 
 ADD ./install/ssh_config /root/.ssh/config
@@ -118,3 +114,14 @@ EXPOSE 10020 19888
 EXPOSE 8030 8031 8032 8033 8040 8042 8088
 # Other ports
 EXPOSE 49707 2122
+
+#-------------------------------------------------------
+# SPARK INSTALLER
+#-------------------------------------------------------
+
+RUN apt-get -y install \
+    python3 \
+    python3-pip
+RUN curl http://archive.apache.org/dist/spark/spark-$SPARK_VERSION/spark-$SPARK_VERSION-bin-hadoop2.7.tgz --output spark.tgz
+RUN tar -zxvf spark.tgz
+RUN ln -s spark-${SPARK_VERSION}-bin-hadoop2.7 $SPARK_HOME
