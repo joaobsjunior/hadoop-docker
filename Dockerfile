@@ -98,6 +98,7 @@ RUN service ssh start && \
     $HADOOP_HOME/bin/hdfs namenode -format && \
     $HADOOP_HOME/sbin/start-dfs.sh && \
     $HADOOP_HOME/bin/hdfs dfs -mkdir /tmp && \
+    $HADOOP_HOME/bin/hdfs dfs -mkdir /data && \
     $HADOOP_HOME/bin/hdfs dfs -mkdir -p /user/root && \
     $HADOOP_HOME/bin/hdfs dfs -mkdir /spark-logs && \
     $HADOOP_HOME/bin/hdfs dfs -put $HADOOP_HOME/etc/hadoop input && \
@@ -152,3 +153,5 @@ ENV MONGODB_HOME=/usr/bin
 RUN apt-get -y install mongodb
 RUN mkdir -p /data/db
 RUN mongod -f /etc/mongod.conf
+ADD ./database.csv database.csv
+RUN mongoimport database.csv --type csv --headerline --db data_test
