@@ -35,7 +35,7 @@ ENV HADOOP_CONF_DIR=$HADOOP_HOME/etc/hadoop \
     YARN_HOME=$HADOOP_HOME
 
 # get hadoop project
-RUN curl --retry 100 --retry-delay 1 http://ftp.unicamp.br/pub/apache/hadoop/common/hadoop-$HADOOP_VERSION/hadoop-$HADOOP_VERSION.tar.gz --output hadoop.tar.gz
+RUN curl --retry 100 --retry-delay 1 -L http://ftp.unicamp.br/pub/apache/hadoop/common/hadoop-$HADOOP_VERSION/hadoop-$HADOOP_VERSION.tar.gz --output hadoop.tar.gz
 RUN tar -zxvf hadoop.tar.gz
 RUN ln -s /hadoop-$HADOOP_VERSION ${HADOOP_HOME}
 RUN ls -la ${HADOOP_HOME}
@@ -61,15 +61,9 @@ export HADOOP_HDFS_HOME=$HADOOP_HOME \
 export HADOOP_CONF_DIR=$HADOOP_HOME/etc/hadoop \
 export HADOOP_COMMON_LIB_NATIVE_DIR=$HADOOP_HOME/lib/native \
 export HADOOP_OPTS="$HADOOP_OPTS -Djava.library.path=$HADOOP_HOME/lib/native" \
-export PATH=$PATH:$HADOOP_HOME/sbin \
-export PATH=$PATH:$HADOOP_HOME/bin \
 export HADOOP_INSTALL=$HADOOP_HOME \
 export HADOOP_CLASSPATH=$JAVA_HOME/lib/tools.jar \
-export YARN_HOME=$HADOOP_HOME \
-export HIVE_HOME=/usr/local/hive \
-export SPARK_VERSION=2.4.0 \
-export SPARK_HOME=/usr/local/spark \
-export PATH=$PATH:$HIVE_HOME/bin' >> /root/.bashrc
+export YARN_HOME=$HADOOP_HOME' >> /root/.bashrc
 
 ADD ./install/ssh_config /root/.ssh/config
 RUN chmod 600 /root/.ssh/config
@@ -82,6 +76,7 @@ RUN chown root:root /etc/bootstrap.sh && \
 ENV BOOTSTRAP /etc/bootstrap.sh
 
 SHELL [ "/bin/bash", "-c" ]
+
 # workingaround docker.io build error
 RUN ls -la $HADOOP_HOME/etc/hadoop/*-env.sh
 RUN chmod +x $HADOOP_HOME/etc/hadoop/*-env.sh
@@ -97,12 +92,14 @@ RUN service ssh start && \
     $HADOOP_HOME/etc/hadoop/hadoop-env.sh && \
     $HADOOP_HOME/bin/hdfs namenode -format && \
     $HADOOP_HOME/sbin/start-dfs.sh && \
-    $HADOOP_HOME/bin/hdfs dfs -mkdir /tmp && \
-    $HADOOP_HOME/bin/hdfs dfs -mkdir /data && \
+    $HADOOP_HOME/bin/hdfs dfs -mkdir -p /tmp && \
+    $HADOOP_HOME/bin/hdfs dfs -mkdir -p /data && \
     $HADOOP_HOME/bin/hdfs dfs -mkdir -p /user/root && \
-    $HADOOP_HOME/bin/hdfs dfs -mkdir /spark-logs && \
-    $HADOOP_HOME/bin/hdfs dfs -put $HADOOP_HOME/etc/hadoop input && \
+    $HADOOP_HOME/bin/hdfs dfs -mkdir -p /user/hive/warehouse && \
     $HADOOP_HOME/bin/hdfs dfs -chmod g+w /tmp && \
+    $HADOOP_HOME/bin/hdfs dfs -chmod g+w /user/hive/warehouse && \
+    $HADOOP_HOME/bin/hdfs dfs -put $HADOOP_HOME/etc/hadoop input && \
+    $HADOOP_HOME/bin/hdfs dfs -ls / && \
     $HADOOP_HOME/sbin/start-yarn.sh && \
     jps
 
@@ -121,37 +118,55 @@ EXPOSE 49707 2122
 # SPARK INSTALLER
 # -------------------------------------------------------
 
-ENV LD_LIBRARY_PATH=$HADOOP_HOME/lib/native \
-    SPARK_VERSION=2.4.0 \
-    SPARK_HOME=/usr/local/spark
-RUN echo '\
-    export PATH=$PATH:$SPARK_HOME/bin \
-    LD_LIBRARY_PATH=$HADOOP_HOME/lib/native' >> /root/.bashrc
-RUN apt-get -y install \
-    vim \
-    python3 \
-    python3-pip
-RUN curl --retry 100 --retry-delay 1 http://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop2.7.tgz --output spark.tgz
-RUN tar -zxvf spark.tgz
-RUN ln -s /spark-${SPARK_VERSION}-bin-hadoop2.7 ${SPARK_HOME}
-RUN cp -f $SPARK_HOME/conf/spark-defaults.conf.template $SPARK_HOME/conf/spark-defaults.conf && \
-    echo "\
-    spark.master                        yarn \
-    spark.driver.memory                 1G \
-    spark.yarn.am.memory                1G \
-    spark.executor.memory               1G \
-    spark.eventLog.enabled              true \
-    spark.eventLog.dir                  hdfs://node-master:9000/spark-logs \
-    spark.history.fs.update.interval    10s \
-    spark.history.ui.port               18080" >> $SPARK_HOME/conf/spark-defaults.conf
-RUN $SPARK_HOME/sbin/start-history-server.sh
+# RUN echo 'export SPARK_VERSION=2.4.0 \
+# export SPARK_HOME=/usr/local/spark' >> /root/.bashrc
+# ENV LD_LIBRARY_PATH=$HADOOP_HOME/lib/native \
+#     SPARK_VERSION=2.4.0 \
+#     SPARK_HOME=/usr/local/spark
+# RUN echo '\
+#     LD_LIBRARY_PATH=$HADOOP_HOME/lib/native' >> /root/.bashrc
+# RUN apt-get -y install \
+#     vim \
+#     python3 \
+#     python3-pip
+# RUN curl --retry 100 --retry-delay 1 http://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop2.7.tgz --output spark.tgz
+# RUN tar -zxvf spark.tgz
+# RUN ln -s /spark-${SPARK_VERSION}-bin-hadoop2.7 ${SPARK_HOME}
+# RUN cp -f $SPARK_HOME/conf/spark-defaults.conf.template $SPARK_HOME/conf/spark-defaults.conf && \
+#     echo "\
+#     spark.master                        yarn \
+#     spark.driver.memory                 1G \
+#     spark.yarn.am.memory                1G \
+#     spark.executor.memory               1G \
+#     spark.eventLog.enabled              true \
+#     spark.eventLog.dir                  hdfs://node-master:9000/spark-logs \
+#     spark.history.fs.update.interval    10s \
+#     spark.history.ui.port               18080" >> $SPARK_HOME/conf/spark-defaults.conf
+# RUN $SPARK_HOME/sbin/start-history-server.sh
+
+#-------------------------------------------------------
+# HIVE INSTALLER
+#-------------------------------------------------------
+
+ENV HIVE_VERSION=2.3.4 \
+    HIVE_HOME=/usr/local/hive
+RUN echo 'export HIVE_HOME=/usr/local/hive' >> /root/.bashrc
+RUN curl --retry 100 --retry-delay 1 -L http://mirror.nbtelecom.com.br/apache/hive/hive-${HIVE_VERSION}/apache-hive-${HIVE_VERSION}-bin.tar.gz --output apache-hive.tar.gz
+RUN tar -zxvf apache-hive.tar.gz
+RUN ln -s /apache-hive-${HIVE_VERSION}-bin ${HIVE_HOME}
 
 #-------------------------------------------------------
 # MONGODB INSTALLER
 #-------------------------------------------------------
-ENV MONGODB_HOME=/usr/bin
+
+RUN echo '\
+    MONGO_HADOOP_HOME=/usr/local/mongo-hadoop' >> /root/.bashrc
+ENV MONGO_HADOOP_HOME=/usr/local/mongo-hadoop \
+    MONGO_HADOOP_VERSION=2.0.2
 RUN apt-get -y install mongodb
 RUN mkdir -p /data/db
-RUN mongod -f /etc/mongod.conf
-ADD ./database.csv database.csv
-RUN mongoimport database.csv --type csv --headerline --db data_test
+RUN curl --retry 100 --retry-delay 1 -L https://github.com/mongodb/mongo-hadoop/archive/r${MONGO_HADOOP_VERSION}.tar.gz --output mongo-hadoop.tar.gz
+RUN tar -zxvf mongo-hadoop.tar.gz
+RUN ln -s /mongo-hadoop-r${MONGO_HADOOP_VERSION} ${MONGO_HADOOP_HOME}
+#RUN mongod --config /etc/mongodb.conf
+#RUN mongoimport database.csv --type csv --headerline --db data_test

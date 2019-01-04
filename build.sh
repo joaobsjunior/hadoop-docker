@@ -7,3 +7,4 @@ docker run -d \
     --name hadoop -v $(pwd)/data:/data_mount hadoop
 
 #Listar portas: lsof -i TCP| fgrep LISTEN
+#Listar uso de portas: sudo netstat -aon
